@@ -1,0 +1,83 @@
+html {
+    box-sizing: border-box;
+    overflow: -moz-scrollbars-vertical;
+    overflow-y: scroll;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+body {
+    margin: 0;
+    background: #fafafa;
+}
+
+.link, .float-right {
+    display: none !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper .download-url-button {
+    background: #168EF9 !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper input[type=text] {
+    border-color: #168EF9 !important;
+}
+
+.swagger-ui .btn.authorize {
+    color: #168EF9 !important;
+    border-color: #168EF9 !important;
+}
+
+.swagger-ui .btn.authorize svg {
+    fill: #168EF9 !important;
+}
+
+.swagger-ui .info .title small.version-stamp {
+    background-color: #168EF9 !important;
+}
+
+.swagger-ui .opblock.opblock-post .opblock-summary-method {
+    background: #168EF9 !important;
+    border-color: #168EF9 !important;
+}
+
+.swagger-ui .opblock.opblock-post {
+    border-color: #168EF9 !important;
+    background: unset !important;
+}
+
+.swagger-ui .opblock.opblock-post .opblock-summary {
+    border-color: #168EF9 !important;
+}
+
+.swagger-ui table.model tr.property-row .star {
+    color: #168EF9 !important;
+}
+
+.swagger-ui .prop-type {
+    color: #168EF9 !important;
+}
+
+html.dark-mode .swagger-ui .opblock.opblock-post .opblock-section-header {
+    background: #168EF9 !important;
+}
+
+.swagger-ui .opblock.opblock-post .tab-header .tab-item.active h4 span:after {
+    background: #168EF9 !important;
+}
+
+.swagger-ui .response-control-media-type--accept-controller select {
+    border-color: #168EF9 !important;
+}
+
+.swagger-ui .response-control-media-type__accept-message {
+    color: #168EF9 !important;
+}
+
+span[style] {
+    color: #168EF9 !important;
+}

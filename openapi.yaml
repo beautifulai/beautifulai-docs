@@ -1,0 +1,233 @@
+openapi: 3.0.3
+info:
+  title: Beautiful.ai API
+  version: "1.0.0"
+  description: |
+    The Beautiful.ai API lets you generate fully designed presentations from natural-language prompts.
+
+    This initial version exposes a single endpoint for generating presentations.
+
+servers:
+  - url: https://beautiful.ai/api/v1
+    description: Production
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /generatePresentation:
+    post:
+      summary: Generate a presentation
+      description: |
+        Generate a fully designed presentation from a natural-language prompt.
+      operationId: generatePresentation
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        description: Parameters for the generated presentation.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePresentationRequest'
+            examples:
+              simplePitchDeck:
+                summary: Seed-stage SaaS pitch deck
+                value:
+                  prompt: "A pitch deck for a seed-stage B2B SaaS startup selling HR software."
+                  themeId: "minimal"
+      responses:
+        '200':
+          description: Presentation generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratePresentationResponse'
+              examples:
+                success:
+                  summary: Successfully generated presentation
+                  value:
+                    presentationId: "pres_123456789"
+                    status: "completed"
+                    title: "Seed-Stage B2B SaaS Pitch"
+                    playerUrl: "https://beautiful.ai/player/pres_123456789"
+                    editorUrl: "https://beautiful.ai/pres_123456789/1"
+                    warnings: []
+        '400':
+          description: Bad request - invalid or missing parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingPrompt:
+                  summary: Missing prompt
+                  value:
+                    name: "ApiError400"
+                    message: "The 'prompt' field is required."
+                    code: "badrequest"
+                    status: 400
+        '401':
+          description: Unauthorized - invalid or missing API key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  summary: Invalid API key
+                  value:
+                    name: "ApiError401"
+                    message: "Your API key is missing or invalid."
+                    code: "unauthorized"
+                    status: 401
+        '403':
+          description: Forbidden - API key does not have access to this endpoint.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  summary: Not allowed
+                  value:
+                    name: "ApiError403"
+                    message: "Your account does not have access to the Beautiful.ai API."
+                    code: "forbidden"
+                    status: 403
+        '429':
+          description: Too Many Requests - you have exceeded your rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rateLimit:
+                  summary: Rate limit exceeded
+                  value:
+                    name: "ApiError429"
+                    message: "You have exceeded your rate limit of 60 requests per minute."
+                    code: "toomanyrequests"
+                    status: 429
+        '500':
+          description: Internal server error - something went wrong on our side.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Internal error
+                  value:
+                    name: "ApiError500"
+                    message: "An unexpected error occurred. Please try again."
+                    code: "servererror"
+                    status: 500
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Use your Beautiful.ai API Key in this header.
+
+  schemas:
+    GeneratePresentationRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: A natural-language description of the presentation you want Beautiful.ai to create.
+          example: "A sales pitch for an enterprise cybersecurity platform aimed at CIOs."
+          maxLength: 10000
+        themeId:
+          type: string
+          description: Optional built-in theme id, or "team" to use the default team theme (Team plan required).
+          enum:
+            - daybreak
+            - discovery
+            - horizon
+            - luminary
+            - ember
+            - spritz
+            - minimal
+            - classic
+            - bold
+            - magazine
+            - inc
+            - cheeky
+            - museum
+            - space
+            - dark
+            - team
+          example: "minimal"
+
+    GeneratePresentationResponse:
+      type: object
+      required:
+        - presentationId
+        - status
+        - playerUrl
+        - editorUrl
+      properties:
+        presentationId:
+          type: string
+          description: Unique identifier for the generated presentation.
+          example: "pres_123456789"
+        status:
+          type: string
+          description: Current status of the presentation generation.
+          enum:
+            - "completed"
+            - "in_progress"
+            - "failed"
+          example: "completed"
+        title:
+          type: string
+          description: Title of the generated presentation.
+          example: "Enterprise Cybersecurity Sales Pitch"
+        playerUrl:
+          type: string
+          format: uri
+          description: URL where the presentation can be viewed in the Beautiful.ai player.
+          example: "https://beautiful.ai/player/pres_123456789"
+        editorUrl:
+          type: string
+          format: uri
+          description: URL where the presentation can be opened and edited in Beautiful.ai.
+          example: "https://beautiful.ai/pres_123456789/1"
+        warnings:
+          type: array
+          description: Optional list of non-fatal warnings related to the generated presentation.
+          items:
+            type: string
+          example:
+            - "Prompt was very long; some content may have been truncated."
+
+    ErrorResponse:
+      type: object
+      required:
+        - name
+        - message
+        - code
+        - status
+      properties:
+        name:
+          type: string
+          description: Error name including HTTP status.
+          example: "ApiError400"
+        message:
+          type: string
+          description: Human-readable description of the error.
+          example: "The 'prompt' field is required."
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: "badrequest"
+        status:
+          type: integer
+          description: HTTP status code.
+          example: 400
