@@ -106,7 +106,7 @@ paths:
                   summary: Rate limit exceeded
                   value:
                     name: "ApiError429"
-                    message: "You have exceeded your rate limit of 60 requests per minute."
+                    message: "You have exceeded your rate limit of 50 requests per day."
                     code: "toomanyrequests"
                     status: 429
         '500':
