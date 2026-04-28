@@ -3,39 +3,35 @@ info:
   title: Beautiful.ai API
   version: "1.0.0"
   description: |
-    The Beautiful.ai API lets you generate fully designed presentations from natural-language prompts.
+    The Beautiful.ai API lets you generate, inspect, copy, and export presentations.
 
-    This initial version exposes a single endpoint for generating presentations.
+    The `/generatePresentation` endpoint creates a deck directly from a natural-language prompt.
+    The remaining AI workflow endpoints mirror the current Beautiful.ai MCP tools and return the same structured result payloads exposed by those tools.
 
 servers:
-  - url: https://beautiful.ai/api/v1
+  - url: https://www.beautiful.ai/api/v1
     description: Production
 
 security:
   - ApiKeyAuth: []
+  - BearerApiKeyAuth: []
 
 paths:
   /generatePresentation:
     post:
-      summary: Generate a presentation
+      summary: Generate a presentation from a prompt
       description: |
         Generate a fully designed presentation from a natural-language prompt.
       operationId: generatePresentation
       security:
         - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
       requestBody:
         required: true
-        description: Parameters for the generated presentation.
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GeneratePresentationRequest'
-            examples:
-              simplePitchDeck:
-                summary: Seed-stage SaaS pitch deck
-                value:
-                  prompt: "A pitch deck for a seed-stage B2B SaaS startup selling HR software."
-                  themeId: "minimal"
       responses:
         '200':
           description: Presentation generated successfully.
@@ -43,94 +39,328 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GeneratePresentationResponse'
-              examples:
-                success:
-                  summary: Successfully generated presentation
-                  value:
-                    presentationId: "pres_123456789"
-                    status: "completed"
-                    title: "Seed-Stage B2B SaaS Pitch"
-                    playerUrl: "https://beautiful.ai/player/pres_123456789"
-                    editorUrl: "https://beautiful.ai/pres_123456789/1"
-                    warnings: []
         '400':
-          description: Bad request - invalid or missing parameters.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                missingPrompt:
-                  summary: Missing prompt
-                  value:
-                    name: "ApiError400"
-                    message: "The 'prompt' field is required."
-                    code: "badrequest"
-                    status: 400
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized - invalid or missing API key.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  summary: Invalid API key
-                  value:
-                    name: "ApiError401"
-                    message: "Your API key is missing or invalid."
-                    code: "unauthorized"
-                    status: 401
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Forbidden - API key does not have access to this endpoint.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                forbidden:
-                  summary: Not allowed
-                  value:
-                    name: "ApiError403"
-                    message: "Your account does not have access to the Beautiful.ai API."
-                    code: "forbidden"
-                    status: 403
-        '429':
-          description: Too Many Requests - you have exceeded your rate limit.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                rateLimit:
-                  summary: Rate limit exceeded
-                  value:
-                    name: "ApiError429"
-                    message: "You have exceeded your rate limit of 50 requests per day."
-                    code: "toomanyrequests"
-                    status: 429
+          $ref: '#/components/responses/Forbidden'
         '500':
-          description: Internal server error - something went wrong on our side.
+          $ref: '#/components/responses/InternalServerError'
+
+  /getThemes:
+    get:
+      summary: List available themes
+      description: |
+        Returns built-in themes plus the authenticated user's saved and team themes.
+      operationId: getThemes
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdQuery'
+      responses:
+        '200':
+          description: Themes returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Internal error
-                  value:
-                    name: "ApiError500"
-                    message: "An unexpected error occurred. Please try again."
-                    code: "servererror"
-                    status: 500
+                $ref: '#/components/schemas/GetThemesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /getFolders:
+    get:
+      summary: List available folders
+      description: |
+        Returns the authenticated user's available presentation folders, separated into My Folders and Team folders.
+      operationId: getFolders
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdQuery'
+      responses:
+        '200':
+          description: Folder list returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFoldersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /listPresentations:
+    post:
+      summary: List accessible presentations
+      description: |
+        Lists presentations and optional templates available to the authenticated user across accessible workspaces.
+      operationId: listPresentations
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListPresentationsRequest'
+      responses:
+        '200':
+          description: Presentation list returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPresentationsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /listPresentationTemplates:
+    post:
+      summary: List accessible presentation templates
+      description: |
+        Lists presentation templates available to the authenticated user across accessible workspaces.
+      operationId: listPresentationTemplates
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListPresentationTemplatesRequest'
+      responses:
+        '200':
+          description: Template list returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPresentationTemplatesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /getPresentation:
+    post:
+      summary: Load an existing presentation
+      description: |
+        Retrieves an accessible presentation and returns playback, editing, and export capability metadata.
+      operationId: getPresentation
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetPresentationRequest'
+      responses:
+        '200':
+          description: Presentation returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPresentationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /getPresentationTemplateVariables:
+    post:
+      summary: Inspect template variables
+      description: |
+        Loads a presentation template, scans all string fields for `${variable}` placeholders, and returns the normalized variable inventory.
+      operationId: getPresentationTemplateVariables
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetPresentationTemplateVariablesRequest'
+      responses:
+        '200':
+          description: Template variable inventory returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPresentationTemplateVariablesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /createPresentation:
+    post:
+      summary: Create a presentation from a structured outline
+      description: |
+        Creates a Beautiful.ai presentation from a structured outline supplied by the caller.
+      operationId: createPresentation
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresentationRequest'
+      responses:
+        '200':
+          description: Presentation created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePresentationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /createPresentationFromTemplate:
+    post:
+      summary: Copy a presentation template and interpolate variables
+      description: |
+        Copies a presentation template into its owning workspace and interpolates provided `${variable}` values.
+      operationId: createPresentationFromTemplate
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresentationFromTemplateRequest'
+      responses:
+        '200':
+          description: Presentation created from template successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePresentationFromTemplateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /exportPresentation:
+    post:
+      summary: Export a presentation
+      description: |
+        Exports a Beautiful.ai presentation to PDF or PPTX and returns a temporary signed download URL.
+      operationId: exportPresentation
+      security:
+        - ApiKeyAuth: []
+        - BearerApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportPresentationRequest'
+      responses:
+        '200':
+          description: Export created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportPresentationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
+  parameters:
+    WorkspaceIdQuery:
+      name: workspaceId
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Optional workspace id to target explicitly instead of using the default AI-enabled workspace for the API key.
+
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
       in: header
       name: X-Api-Key
-      description: Use your Beautiful.ai API Key in this header.
+      description: Preferred. Send your Beautiful.ai API key in the X-Api-Key header.
+    BearerApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: "Alternative. You may also send the same Beautiful.ai API key as Authorization: Bearer <api-key>."
+
+  responses:
+    BadRequest:
+      description: Bad request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated, but not allowed to perform the action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
     GeneratePresentationRequest:
@@ -138,32 +368,28 @@ components:
       required:
         - prompt
       properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
         prompt:
           type: string
-          description: A natural-language description of the presentation you want Beautiful.ai to create.
-          example: "A sales pitch for an enterprise cybersecurity platform aimed at CIOs."
           maxLength: 10000
+          description: A natural-language description of the presentation to generate.
+        folderId:
+          type: string
+          description: Optional presentation folder id returned by `/getFolders`.
         themeId:
           type: string
-          description: Optional built-in theme id, or "team" to use the default team theme (Team plan required).
-          enum:
-            - daybreak
-            - discovery
-            - horizon
-            - luminary
-            - ember
-            - spritz
-            - minimal
-            - classic
-            - bold
-            - magazine
-            - inc
-            - cheeky
-            - museum
-            - space
-            - dark
-            - team
-          example: "minimal"
+          description: Optional `team` or any theme id returned by `/getThemes`.
+        imageSource:
+          type: string
+          enum: [ai, web, stock, none]
+        imageStyle:
+          type: string
+        language:
+          type: string
+        preserveExactText:
+          type: boolean
 
     GeneratePresentationResponse:
       type: object
@@ -171,63 +397,622 @@ components:
         - presentationId
         - status
         - playerUrl
-        - editorUrl
       properties:
         presentationId:
           type: string
-          description: Unique identifier for the generated presentation.
-          example: "pres_123456789"
         status:
           type: string
-          description: Current status of the presentation generation.
-          enum:
-            - "completed"
-            - "in_progress"
-            - "failed"
-          example: "completed"
+          enum: [completed, in_progress, failed]
         title:
           type: string
-          description: Title of the generated presentation.
-          example: "Enterprise Cybersecurity Sales Pitch"
         playerUrl:
           type: string
           format: uri
-          description: URL where the presentation can be viewed in the Beautiful.ai player.
-          example: "https://beautiful.ai/player/pres_123456789"
-        editorUrl:
-          type: string
-          format: uri
-          description: URL where the presentation can be opened and edited in Beautiful.ai.
-          example: "https://beautiful.ai/pres_123456789/1"
         warnings:
           type: array
-          description: Optional list of non-fatal warnings related to the generated presentation.
           items:
             type: string
-          example:
-            - "Prompt was very long; some content may have been truncated."
+
+    ThemeMetadata:
+      type: object
+      required:
+        - paletteName
+        - imageStyle
+        - isDefault
+        - isHidden
+        - workspaceId
+        - workspaceName
+      properties:
+        paletteName:
+          type: string
+          nullable: true
+        imageStyle:
+          type: string
+          nullable: true
+        isDefault:
+          type: boolean
+        isHidden:
+          type: boolean
+        workspaceId:
+          type: string
+          nullable: true
+        workspaceName:
+          type: string
+          nullable: true
+
+    ThemeSummary:
+      type: object
+      required:
+        - id
+        - name
+        - source
+        - metadata
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        source:
+          type: string
+          enum: [built_in, saved, team]
+        metadata:
+          $ref: '#/components/schemas/ThemeMetadata'
+
+    GetThemesResponse:
+      type: object
+      required:
+        - themes
+      properties:
+        themes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThemeSummary'
+
+    FolderSummary:
+      type: object
+      required:
+        - id
+        - name
+        - workspaceId
+        - workspaceName
+        - folderType
+        - isSubfolder
+        - isDefaultSharedFolder
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        workspaceId:
+          type: string
+        workspaceName:
+          type: string
+        folderType:
+          type: string
+          enum: [personal, shared, sharedDefault]
+        parentFolderId:
+          type: string
+        isSubfolder:
+          type: boolean
+        isDefaultSharedFolder:
+          type: boolean
+
+    GetFoldersResponse:
+      type: object
+      required:
+        - myFolders
+        - teamFolders
+      properties:
+        myFolders:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderSummary'
+        teamFolders:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderSummary'
+
+    PresentationSummary:
+      type: object
+      required:
+        - presentationId
+        - name
+        - workspaceId
+        - modifiedAt
+        - createdAt
+        - slideCount
+        - isTemplate
+        - isPublished
+        - isTrashed
+        - ownerName
+        - canEdit
+      properties:
+        presentationId:
+          type: string
+        name:
+          type: string
+        workspaceId:
+          type: string
+        modifiedAt:
+          type: number
+        createdAt:
+          type: number
+          nullable: true
+        slideCount:
+          type: number
+        isTemplate:
+          type: boolean
+        isPublished:
+          type: boolean
+        isTrashed:
+          type: boolean
+        ownerName:
+          type: string
+        canEdit:
+          type: boolean
+
+    ListPresentationsRequest:
+      type: object
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        query:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        includeTemplates:
+          type: boolean
+        includeTrashed:
+          type: boolean
+
+    PresentationLookupInput:
+      type: object
+      required:
+        - presentationId
+      properties:
+        presentationId:
+          type: string
+
+    ListPresentationsResponse:
+      type: object
+      required:
+        - presentations
+        - total
+        - bestMatchPresentationId
+        - bestMatchName
+        - shouldAutoOpen
+        - autoOpenReason
+        - shouldCallGetPresentationImmediately
+        - nextToolToCall
+        - nextToolInput
+        - recommendedNextTool
+        - recommendedNextToolArguments
+        - recommendedNextStep
+        - callerInstruction
+      properties:
+        presentations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PresentationSummary'
+        total:
+          type: number
+        bestMatchPresentationId:
+          type: string
+          nullable: true
+        bestMatchName:
+          type: string
+          nullable: true
+        shouldAutoOpen:
+          type: boolean
+        autoOpenReason:
+          type: string
+          nullable: true
+        shouldCallGetPresentationImmediately:
+          type: boolean
+        nextToolToCall:
+          type: string
+          enum: [get_presentation]
+          nullable: true
+        nextToolInput:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PresentationLookupInput'
+          nullable: true
+        recommendedNextTool:
+          type: string
+          enum: [get_presentation]
+          nullable: true
+        recommendedNextToolArguments:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PresentationLookupInput'
+          nullable: true
+        recommendedNextStep:
+          type: string
+          nullable: true
+        callerInstruction:
+          type: string
+          nullable: true
+
+    PresentationTemplateSummary:
+      type: object
+      required:
+        - presentationId
+        - name
+        - workspaceId
+        - modifiedAt
+        - slideCount
+        - isPublished
+        - isTrashed
+        - ownerName
+        - canEdit
+      properties:
+        presentationId:
+          type: string
+        name:
+          type: string
+        workspaceId:
+          type: string
+        modifiedAt:
+          type: number
+        slideCount:
+          type: number
+        isPublished:
+          type: boolean
+        isTrashed:
+          type: boolean
+        ownerName:
+          type: string
+        canEdit:
+          type: boolean
+
+    ListPresentationTemplatesRequest:
+      type: object
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        query:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        includeTrashed:
+          type: boolean
+
+    ListPresentationTemplatesResponse:
+      type: object
+      required:
+        - templates
+        - total
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/PresentationTemplateSummary'
+        total:
+          type: number
+
+    PresentationActionResponse:
+      type: object
+      required:
+        - presentationId
+        - title
+        - editorSupported
+        - availableExports
+        - exportSupported
+        - exportDescription
+        - suggestedNextActions
+        - availableTools
+        - mode
+        - customToken
+        - uid
+      properties:
+        presentationId:
+          type: string
+        title:
+          type: string
+        editorSupported:
+          type: boolean
+        availableExports:
+          type: array
+          items:
+            type: string
+            enum: [pdf, pptx]
+        exportSupported:
+          type: boolean
+        exportDescription:
+          type: string
+        suggestedNextActions:
+          type: array
+          items:
+            type: string
+        availableTools:
+          type: array
+          items:
+            type: string
+        mode:
+          type: string
+          enum: [created]
+        customToken:
+          type: string
+        uid:
+          type: string
+
+    GetPresentationRequest:
+      type: object
+      required:
+        - presentationId
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        presentationId:
+          type: string
+
+    GetPresentationResponse:
+      $ref: '#/components/schemas/PresentationActionResponse'
+
+    TemplateVariable:
+      type: object
+      required:
+        - name
+        - occurrenceCount
+        - syntaxesSeen
+        - paths
+      properties:
+        name:
+          type: string
+        occurrenceCount:
+          type: number
+        syntaxesSeen:
+          type: array
+          items:
+            type: string
+            enum: ['${}']
+        paths:
+          type: array
+          items:
+            type: string
+
+    GetPresentationTemplateVariablesRequest:
+      type: object
+      required:
+        - presentationId
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        presentationId:
+          type: string
+
+    GetPresentationTemplateVariablesResponse:
+      type: object
+      required:
+        - presentationId
+        - title
+        - hasVariables
+        - totalVariables
+        - totalOccurrences
+        - variables
+      properties:
+        presentationId:
+          type: string
+        title:
+          type: string
+        hasVariables:
+          type: boolean
+        totalVariables:
+          type: number
+        totalOccurrences:
+          type: number
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+
+    ThemeOptions:
+      type: object
+      properties:
+        backgroundColor:
+          type: string
+          enum: [light, dark]
+        colors:
+          type: array
+          minItems: 2
+          maxItems: 8
+          items:
+            type: string
+            pattern: '^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+        fillStyle:
+          type: string
+          enum: [outline, muted, filled]
+        headerPosition:
+          type: string
+          enum: [left, center]
+        preferredShapes:
+          type: string
+          enum: [none, circle, square, rounded]
+        typography:
+          type: string
+          enum: [bold, modern, simple, serif, editorial, playful, technical, classic]
+
+    OutlineSlide:
+      type: object
+      required:
+        - title
+        - summary
+        - type
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        type:
+          type: string
+          enum:
+            - title
+            - conclusion
+            - text-with-image
+            - bullet-list
+            - timeline-diagram
+            - team-members
+            - table
+            - process-diagram
+            - numbered-list
+            - basic-company-info
+            - images-with-text
+            - photo-collage
+            - quote
+            - chart
+            - company-logos
+            - biography
+            - venn-diagram
+            - comparison-diagram
+            - agenda
+            - boxes-with-text
+            - arrow-bars
+            - thermometer
+            - x-y-plot
+            - funnel
+            - wordcloud
+            - swot-diagram
+            - arrow-cycles
+            - cycle
+            - hub-and-spoke
+            - target
+            - journey
+            - gantt-chart
+
+    StructuredPresentationOutlineRequest:
+      type: object
+      required:
+        - title
+        - slides
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        title:
+          type: string
+        folderId:
+          type: string
+          description: Optional presentation folder id returned by `/getFolders`.
+        themeId:
+          type: string
+        themeOptions:
+          $ref: '#/components/schemas/ThemeOptions'
+        imageSource:
+          type: string
+          enum: [ai, web, stock, none]
+        imageStyle:
+          type: string
+        language:
+          type: string
+        preserveExactText:
+          type: boolean
+        slides:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OutlineSlide'
+
+    CreatePresentationRequest:
+      $ref: '#/components/schemas/StructuredPresentationOutlineRequest'
+
+    CreatePresentationResponse:
+      $ref: '#/components/schemas/PresentationActionResponse'
+
+    CreatePresentationFromTemplateRequest:
+      type: object
+      required:
+        - presentationId
+        - values
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        presentationId:
+          type: string
+        name:
+          type: string
+        values:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+
+    CreatePresentationFromTemplateResponse:
+      allOf:
+        - $ref: '#/components/schemas/PresentationActionResponse'
+        - type: object
+          required:
+            - unresolvedVariables
+          properties:
+            unresolvedVariables:
+              type: array
+              items:
+                type: string
+
+    ExportPresentationRequest:
+      type: object
+      required:
+        - presentationId
+        - format
+      properties:
+        workspaceId:
+          type: string
+          description: Optional workspace id to target explicitly.
+        presentationId:
+          type: string
+        format:
+          type: string
+          enum: [pdf, pptx]
+        includeSkippedSlides:
+          type: boolean
+        pdfCompressionType:
+          type: string
+          enum: [none, LOW, MEDIUM, HIGH]
+
+    ExportPresentationResponse:
+      type: object
+      required:
+        - presentationId
+        - format
+        - downloadUrl
+        - fileName
+        - expiresAt
+      properties:
+        presentationId:
+          type: string
+        format:
+          type: string
+          enum: [pdf, pptx]
+        downloadUrl:
+          type: string
+          format: uri
+        fileName:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
 
     ErrorResponse:
       type: object
       required:
-        - name
         - message
-        - code
-        - status
       properties:
         name:
           type: string
-          description: Error name including HTTP status.
-          example: "ApiError400"
         message:
           type: string
-          description: Human-readable description of the error.
-          example: "The 'prompt' field is required."
         code:
           type: string
-          description: Machine-readable error code.
-          example: "badrequest"
         status:
           type: integer
-          description: HTTP status code.
-          example: 400
